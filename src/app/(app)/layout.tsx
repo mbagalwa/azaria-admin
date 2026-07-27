@@ -1,7 +1,19 @@
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/admin/navbar";
 import { ToastProvider } from "@/components/ui/toast";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, getToken } from "@/lib/auth";
+import { listOrders } from "@/lib/orders";
+import { customerSeed } from "@/lib/cover";
+import type { OrderStatus } from "@/lib/order-status";
+
+/** Statuts « en cours » : ni terminées (delivered/picked_up) ni annulées. */
+const IN_PROGRESS: OrderStatus[] = [
+  "pending",
+  "confirmed",
+  "preparing",
+  "ready",
+  "delivering",
+];
 
 /**
  * Shell du back-office : un navbar horizontal (logo + onglets + menu
@@ -18,9 +30,29 @@ export default async function AppLayout({
     redirect("/login");
   }
 
+  // Cluster navbar : avatars des clients ayant une commande en cours + total.
+  const token = await getToken();
+  const res = token ? await listOrders(token, { limit: 100 }) : null;
+  const orders = res?.ok ? res.data : [];
+  const inProgress = orders.filter((o) => IN_PROGRESS.includes(o.status));
+  const seen = new Set<string>();
+  const clients = inProgress
+    .filter((o) => {
+      const seed = customerSeed(o.customer);
+      if (seen.has(seed)) return false;
+      seen.add(seed);
+      return true;
+    })
+    .slice(0, 4)
+    .map((o) => ({
+      seed: customerSeed(o.customer),
+      initials: o.customer.initials,
+      name: o.customer.fullName,
+    }));
+
   return (
     <ToastProvider>
-      <div className="min-h-dvh bg-[#eaeaea]">
+      <div className="min-h-dvh bg-(--app-background)">
         <Navbar
           user={{
             fullName: user.fullName,
@@ -28,6 +60,8 @@ export default async function AppLayout({
             initials: user.initials,
             role: user.role,
           }}
+          clients={clients}
+          ordersInProgress={inProgress.length}
         />
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
       </div>

@@ -49,6 +49,15 @@
 }
 
 :root {
+  /**
+   * Fond de l'espace admin et hauteur du navbar collant. Les menus secondaires
+   * (barre latérale des Paramètres, menu mobile) se collent SOUS le navbar :
+   * ils lisent cette hauteur au lieu de la recopier en dur, sinon toute
+   * retouche du navbar les décale silencieusement.
+   */
+  --app-background: #eaeaea;
+  --app-navbar-height: 5.125rem;
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);

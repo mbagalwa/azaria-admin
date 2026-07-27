@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ProgramBuilder } from "@/components/admin/program-builder";
 import { getToken } from "@/lib/auth";
+import { listAccompaniments } from "@/lib/accompaniments";
 import { listDishes } from "@/lib/dishes";
 import { listPrograms } from "@/lib/programs";
 
@@ -9,8 +10,9 @@ export const metadata = { title: "Nouveau programme" };
 
 export default async function NouveauProgrammePage() {
   const token = await getToken();
-  const [dishesRes, programsRes] = await Promise.all([
+  const [dishesRes, accompanimentsRes, programsRes] = await Promise.all([
     token ? listDishes(token) : Promise.resolve(null),
+    token ? listAccompaniments(token) : Promise.resolve(null),
     token ? listPrograms(token, { limit: 100 }) : Promise.resolve(null),
   ]);
 
@@ -21,6 +23,15 @@ export default async function NouveauProgrammePage() {
     imageUrl: d.imageUrl,
     isAvailable: d.isAvailable,
     priceCents: d.priceCents,
+  }));
+  const accompaniments = (
+    accompanimentsRes?.ok ? accompanimentsRes.data : []
+  ).map((a) => ({
+    id: a.id,
+    name: a.name,
+    imageUrl: a.imageUrl,
+    isAvailable: a.isAvailable,
+    priceCents: a.priceCents,
   }));
   const existingPrograms = (programsRes?.ok ? programsRes.data : []).map((p) => ({
     id: p.id,
@@ -48,6 +59,7 @@ export default async function NouveauProgrammePage() {
       <ProgramBuilder
         mode="create"
         dishes={dishes}
+        accompaniments={accompaniments}
         existingPrograms={existingPrograms}
       />
     </div>

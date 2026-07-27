@@ -6,11 +6,23 @@ import type {
   PaymentMethod,
 } from "@/lib/order-status";
 
+/**
+ * Le commanditaire. Depuis la commande sans compte, il n'a ni id ni email :
+ * son identité est celle saisie au formulaire, et son numéro WhatsApp est le
+ * canal de contact.
+ */
 export type OrderCustomer = {
-  id: number;
-  fullName: string | null;
-  email: string;
+  fullName: string;
+  phone: string | null;
   initials: string;
+};
+
+/** Accompagnement choisi sur une ligne (libellé et prix figés). */
+export type OrderItemAccompaniment = {
+  id: number;
+  accompanimentId: number | null;
+  name: string;
+  priceCents: number;
 };
 
 export type OrderItemLite = {
@@ -19,6 +31,7 @@ export type OrderItemLite = {
   name: string;
   priceCents: number;
   quantity: number;
+  accompaniments: OrderItemAccompaniment[];
 };
 
 /** Un jalon de l'historique (timeline). */
@@ -41,6 +54,7 @@ export type OrderSummary = {
   totalCents: number;
   deliveryFeeCents: number;
   address: string | null;
+  landmark: string | null;
   note: string | null;
   itemsCount: number;
   items: OrderItemLite[];

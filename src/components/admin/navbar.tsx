@@ -28,12 +28,15 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NAV, isActive, type NavIcon } from "@/lib/nav";
+import { customerAvatar } from "@/lib/cover";
+import { useToast } from "@/components/ui/toast";
 import { logoutAction } from "@/app/actions";
 import { useEffect, useState } from "react";
 
@@ -55,16 +58,20 @@ export type NavUser = {
   role: string;
 };
 
-/** Avatar illustré via DiceBear (style micah), sans dépendance. */
-function dicebear(seed: string) {
-  return `https://api.dicebear.com/9.x/micah/svg?seed=${encodeURIComponent(seed)}`;
-}
+/** Un client (commande en cours) affiché dans le cluster d'avatars. */
+export type NavClient = { seed: string; initials: string; name: string };
 
-/** Faux membres d'équipe (placeholder) - juste pour le groupe d'avatars. */
-const TEAM = ["Nadine", "Jean", "Aisha"];
-
-export function Navbar({ user }: { user: NavUser }) {
+export function Navbar({
+  user,
+  clients,
+  ordersInProgress,
+}: {
+  user: NavUser;
+  clients: NavClient[];
+  ordersInProgress: number;
+}) {
   const pathname = usePathname();
+  const toast = useToast();
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
@@ -78,8 +85,10 @@ export function Navbar({ user }: { user: NavUser }) {
     setDark(next);
   }
 
+  // Barre collante : le fond couvre toute la largeur (px-5 et non mx-5) pour que
+  // le contenu défile DERRIÈRE la barre, et non dans ses gouttières latérales.
   return (
-    <header className="pt-4 pb-2 mx-5">
+    <header className="sticky top-0 z-40 bg-(--app-background)/85 px-5 pt-4 pb-2 backdrop-blur-sm">
       <div  className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2 sm:px-6 bg-card rounded-xl">
               {/* Logo */}
       <Link
@@ -118,25 +127,33 @@ export function Navbar({ user }: { user: NavUser }) {
 
       {/* Cluster de droite */}
       <div className="flex items-center gap-2.5">
-        {/* Groupe d'avatars (équipe) - placeholder DiceBear */}
-        <div className="hidden items-center rounded-full border border-border bg-card py-1 pl-2 pr-3 md:flex">
-          <AvatarGroup>
-            {TEAM.map((seed) => (
-              <Avatar key={seed} size="sm">
-                <AvatarImage src={dicebear(seed)} alt="" />
-                <AvatarFallback>{seed.charAt(0)}</AvatarFallback>
-              </Avatar>
-            ))}
-            <AvatarGroupCount className="size-6 text-[0.65rem]">
-              +8
-            </AvatarGroupCount>
-          </AvatarGroup>
-        </div>
+        {/* Clients ayant une commande en cours + total en cours */}
+        {clients.length > 0 && (
+          <div
+            className="hidden items-center rounded-full border border-border bg-card py-1 pl-2 pr-3 md:flex"
+            title={`${ordersInProgress} commande${ordersInProgress > 1 ? "s" : ""} en cours`}
+          >
+            <AvatarGroup>
+              {clients.map((client) => (
+                <Avatar key={client.seed} size="sm">
+                  <AvatarImage src={customerAvatar(client.seed)} alt={client.name} />
+                  <AvatarFallback>{client.initials}</AvatarFallback>
+                </Avatar>
+              ))}
+              <AvatarGroupCount className="size-6 text-[0.65rem]">
+                {ordersInProgress}
+              </AvatarGroupCount>
+            </AvatarGroup>
+          </div>
+        )}
 
         {/* Notifications */}
         <button
           type="button"
           aria-label="Notifications"
+          onClick={() =>
+            toast({ title: "Notifications", message: "Bientôt disponible." })
+          }
           className="relative flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <Bell className="size-4.5" aria-hidden="true" />
@@ -152,7 +169,7 @@ export function Navbar({ user }: { user: NavUser }) {
                 className="flex items-center gap-1.5 rounded-full border border-border bg-card p-1 pr-2 transition-colors hover:bg-muted"
               >
                 <Avatar>
-                  <AvatarImage src={dicebear(user.email)} alt="" />
+                  <AvatarImage src={customerAvatar(user.email)} alt="" />
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     {user.initials}
                   </AvatarFallback>
@@ -165,14 +182,16 @@ export function Navbar({ user }: { user: NavUser }) {
             }
           />
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <span className="block text-sm font-medium text-foreground">
-                {user.fullName ?? "Administrateur"}
-              </span>
-              <span className="block truncate text-xs font-normal text-muted-foreground">
-                {user.email}
-              </span>
-            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>
+                <span className="block text-sm font-medium text-foreground">
+                  {user.fullName ?? "Administrateur"}
+                </span>
+                <span className="block truncate text-xs font-normal text-muted-foreground">
+                  {user.email}
+                </span>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <UserRound className="size-4" aria-hidden="true" />

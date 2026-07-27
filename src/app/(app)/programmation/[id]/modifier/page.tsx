@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ProgramBuilder } from "@/components/admin/program-builder";
 import { getToken } from "@/lib/auth";
+import { listAccompaniments } from "@/lib/accompaniments";
 import { listDishes } from "@/lib/dishes";
 import { getProgram, listPrograms } from "@/lib/programs";
 
@@ -16,9 +17,10 @@ export default async function ModifierProgrammePage({
   const { id } = await params;
   const token = await getToken();
 
-  const [progRes, dishesRes, programsRes] = await Promise.all([
+  const [progRes, dishesRes, accompanimentsRes, programsRes] = await Promise.all([
     token ? getProgram(id, token) : Promise.resolve(null),
     token ? listDishes(token) : Promise.resolve(null),
+    token ? listAccompaniments(token) : Promise.resolve(null),
     token ? listPrograms(token, { limit: 100 }) : Promise.resolve(null),
   ]);
 
@@ -34,6 +36,15 @@ export default async function ModifierProgrammePage({
     imageUrl: d.imageUrl,
     isAvailable: d.isAvailable,
     priceCents: d.priceCents,
+  }));
+  const accompaniments = (
+    accompanimentsRes?.ok ? accompanimentsRes.data : []
+  ).map((a) => ({
+    id: a.id,
+    name: a.name,
+    imageUrl: a.imageUrl,
+    isAvailable: a.isAvailable,
+    priceCents: a.priceCents,
   }));
   const existingPrograms = (programsRes?.ok ? programsRes.data : [])
     .filter((p) => p.id !== program.id)
@@ -63,6 +74,7 @@ export default async function ModifierProgrammePage({
       <ProgramBuilder
         mode="edit"
         dishes={dishes}
+        accompaniments={accompaniments}
         existingPrograms={existingPrograms}
         program={{
           id: program.id,
@@ -72,7 +84,12 @@ export default async function ModifierProgrammePage({
           endDate: program.endDate,
           days: program.days.map((d) => ({
             date: d.date,
-            dishes: d.dishes.map((x) => ({ id: x.id, priceCents: x.priceCents })),
+            dishId: d.dish.id,
+            priceCents: d.dish.priceCents,
+            accompaniments: d.dish.accompaniments.map((a) => ({
+              accompanimentId: a.id,
+              priceCents: a.priceCents,
+            })),
           })),
         }}
       />

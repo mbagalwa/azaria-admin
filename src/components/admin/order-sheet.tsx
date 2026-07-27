@@ -28,7 +28,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { customerAvatar } from "@/lib/cover";
+import { customerAvatar, customerSeed, formatPhone, whatsappLink } from "@/lib/cover";
 import { formatUsd } from "@/lib/format";
 import {
   ORDER_FLOW,
@@ -78,7 +78,8 @@ export function OrderSheet({
   const [statusPending, startStatus] = useTransition();
   const [payPending, startPay] = useTransition();
 
-  const name = order.customer.fullName ?? order.customer.email;
+  const name = order.customer.fullName;
+  const waLink = whatsappLink(order.customer.phone);
   const cancelled = order.status === "cancelled";
   const terminal = isTerminalStatus(order.status);
   const flow = ORDER_FLOW[order.mode];
@@ -123,7 +124,7 @@ export function OrderSheet({
           >
             <span className="flex items-center gap-2">
               <Avatar size="sm">
-                <AvatarImage src={customerAvatar(order.customer.email)} alt="" />
+                <AvatarImage src={customerAvatar(customerSeed(order.customer))} alt="" />
                 <AvatarFallback>{order.customer.initials}</AvatarFallback>
               </Avatar>
               <span className="min-w-0 flex-1">
@@ -162,10 +163,10 @@ export function OrderSheet({
           </SheetDescription>
         </SheetHeader>
 
-        {/* Client */}
+        {/* Client — pas de compte : nom + WhatsApp saisis à la commande. */}
         <div className="flex items-center gap-3 rounded-xl border border-border p-3">
           <Avatar>
-            <AvatarImage src={customerAvatar(order.customer.email)} alt="" />
+            <AvatarImage src={customerAvatar(customerSeed(order.customer))} alt="" />
             <AvatarFallback>{order.customer.initials}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
@@ -173,9 +174,19 @@ export function OrderSheet({
               {name}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {order.customer.email}
+              {formatPhone(order.customer.phone) || "Numéro non renseigné"}
             </p>
           </div>
+          {waLink && (
+            <a
+              href={waLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              WhatsApp
+            </a>
+          )}
         </div>
 
         {error && (
@@ -296,20 +307,40 @@ export function OrderSheet({
 
         {/* Plats + frais + total */}
         <ul className="divide-y divide-border rounded-xl border border-border">
-          {order.items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
-            >
-              <span className="min-w-0 truncate text-foreground">
-                <span className="font-semibold">×{item.quantity}</span>{" "}
-                {item.name}
-              </span>
-              <span className="shrink-0 font-medium text-muted-foreground">
-                {formatUsd(item.priceCents * item.quantity)}
-              </span>
-            </li>
-          ))}
+          {order.items.map((item) => {
+            /** Les suppléments sont facturés par assiette, donc ×quantité. */
+            const extrasCents = item.accompaniments.reduce(
+              (sum, a) => sum + a.priceCents,
+              0,
+            );
+            return (
+              <li key={item.id} className="px-3 py-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-foreground">
+                    <span className="font-semibold">×{item.quantity}</span>{" "}
+                    {item.name}
+                  </span>
+                  <span className="shrink-0 font-medium text-muted-foreground">
+                    {formatUsd((item.priceCents + extrasCents) * item.quantity)}
+                  </span>
+                </div>
+                {item.accompaniments.length > 0 && (
+                  <ul className="mt-1 space-y-0.5 pl-4 text-xs text-muted-foreground">
+                    {item.accompaniments.map((a) => (
+                      <li key={a.id} className="flex justify-between gap-2">
+                        <span className="truncate">↳ {a.name}</span>
+                        {a.priceCents > 0 && (
+                          <span className="shrink-0">
+                            + {formatUsd(a.priceCents * item.quantity)}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
           {order.deliveryFeeCents > 0 && (
             <li className="flex items-center justify-between px-3 py-2 text-sm text-muted-foreground">
               <span>Frais de livraison</span>
@@ -325,7 +356,12 @@ export function OrderSheet({
         {order.address && (
           <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
             <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-            {order.address}
+            <span>
+              {order.address}
+              {order.landmark && (
+                <span className="block text-xs">Repère : {order.landmark}</span>
+              )}
+            </span>
           </p>
         )}
         {order.note && (

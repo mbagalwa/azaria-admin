@@ -1,7 +1,7 @@
 /** Sous-navigation de la page Paramètres (left bar + routing). */
 
 import type { LucideIcon } from "lucide-react";
-import { Bell, Store, UtensilsCrossed, Users } from "lucide-react";
+import { Bell, Salad, Store, UtensilsCrossed, Users } from "lucide-react";
 
 export type ParametresNavItem = {
   href: string;
@@ -18,6 +18,12 @@ export const PARAMETRES_NAV: ParametresNavItem[] = [
     icon: UtensilsCrossed,
   },
   {
+    href: "/parametres/accompagnements",
+    label: "Accompagnements",
+    description: "Ce qui accompagne les plats du jour",
+    icon: Salad,
+  },
+  {
     href: "/parametres/utilisateurs",
     label: "Utilisateurs & rôles",
     description: "Comptes et accès de l'équipe",
@@ -32,7 +38,7 @@ export const PARAMETRES_NAV: ParametresNavItem[] = [
   {
     href: "/parametres/notifications",
     label: "Notifications",
-    description: "Email et WhatsApp Business",
+    description: "WhatsApp client et alertes Telegram",
     icon: Bell,
   },
 ];

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Pencil, Utensils } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { BarChart, DonutChart } from "@/components/admin/program-charts";
+import { BarChart } from "@/components/admin/program-charts";
 import { DeleteProgramButton } from "@/components/admin/delete-program-button";
 import { getToken } from "@/lib/auth";
 import { getProgram } from "@/lib/programs";
@@ -45,26 +45,17 @@ export default async function ProgrammeDetailPage({
   const status = programStatus(p.startDate, p.endDate, today);
   const title = p.title?.trim() || `Programme du ${formatFR(p.startDate)}`;
 
-  const dishCountByDate = new Map(p.days.map((d) => [d.date, d.dishes.length]));
+  /** Un plat par jour : la barre mesure le nombre d'accompagnements proposés. */
+  const extrasByDate = new Map(
+    p.days.map((d) => [d.date, d.dish.accompaniments.length]),
+  );
   const barData = eachDay(p.startDate, p.endDate).map((d) => ({
     label: String(dayNumber(d)),
-    value: dishCountByDate.get(d) ?? 0,
+    /** Initiale du jour : sur plusieurs semaines, le numéro seul est ambigu. */
+    sublabel: weekdayShortFR(d).charAt(0).toUpperCase(),
+    title: formatFR(d),
+    value: extrasByDate.get(d) ?? 0,
   }));
-
-  const catCount = new Map<string, number>();
-  for (const day of p.days) {
-    for (const dish of day.dishes) {
-      const c = dish.category?.trim() || "Sans catégorie";
-      catCount.set(c, (catCount.get(c) ?? 0) + 1);
-    }
-  }
-  const donutData = [...catCount.entries()]
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value);
-
-  const coverage = p.daysCount
-    ? Math.round((p.scheduledDaysCount / p.daysCount) * 100)
-    : 0;
 
   return (
     <div className="space-y-6">
@@ -82,7 +73,7 @@ export default async function ProgrammeDetailPage({
         <img
           src={programCover(p.code)}
           alt=""
-          className="size-16 shrink-0 rounded-xl bg-muted ring-1 ring-foreground/10"
+          className="size-10 shrink-0 rounded-lg bg-muted ring-1 ring-foreground/10"
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -117,48 +108,25 @@ export default async function ProgrammeDetailPage({
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Jours" value={p.daysCount} />
-        <StatCard label="Jours programmés" value={p.scheduledDaysCount} />
-        <StatCard label="Plats programmés" value={p.dishesCount} />
-        <StatCard label="Commandes" value={p.ordersCount} hint="à venir" />
-      </div>
-
-      {/* Graphiques */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard title="Plats par jour">
-          <BarChart data={barData} />
-        </ChartCard>
-        <ChartCard title="Répartition par catégorie">
-          {donutData.length > 0 ? (
-            <DonutChart data={donutData} />
-          ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Aucun plat programmé.
-            </p>
-          )}
-        </ChartCard>
-      </div>
-
-      <ChartCard title="Couverture de l'intervalle">
-        <div className="space-y-2">
-          <div className="h-3 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${coverage}%` }}
-            />
+      {/* Deux colonnes : la liste des plats est le contenu dense, elle prend
+          le double de largeur ; les stats tiennent dans une colonne étroite. */}
+      <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
+        {/* Colonne gauche — statistiques */}
+        <div className="space-y-4 lg:col-span-1">
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Jours" value={p.daysCount} />
+            <StatCard label="Jours programmés" value={p.scheduledDaysCount} />
+            <StatCard label="Plats programmés" value={p.dishesCount} />
+            <StatCard label="Commandes" value={p.ordersCount} hint="à venir" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            {coverage}% — {p.scheduledDaysCount} jour
-            {p.scheduledDaysCount > 1 ? "s" : ""} programmé
-            {p.scheduledDaysCount > 1 ? "s" : ""} sur {p.daysCount}.
-          </p>
-        </div>
-      </ChartCard>
 
-      {/* Détail par date */}
-      <div className="space-y-3">
+          <ChartCard title="Accompagnements par jour">
+            <BarChart data={barData} />
+          </ChartCard>
+        </div>
+
+        {/* Colonne droite — liste des plats */}
+        <div className="space-y-3 lg:col-span-2">
         <h2 className="text-lg font-semibold text-foreground">Détail par date</h2>
         {p.days.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-12 text-center">
@@ -181,48 +149,72 @@ export default async function ProgrammeDetailPage({
                   </p>
                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                     <Utensils className="size-3.5" aria-hidden="true" />
-                    {day.dishes.length} plat{day.dishes.length > 1 ? "s" : ""}
+                    {day.dish.accompaniments.length} accompagnement
+                    {day.dish.accompaniments.length > 1 ? "s" : ""}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {day.dishes.map((dish) => (
-                    <span
-                      key={dish.id}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full border border-border py-1 pl-1.5 pr-2.5 text-sm",
-                        !dish.isAvailable && "opacity-60",
-                      )}
-                    >
-                      {dish.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={dish.imageUrl}
-                          alt=""
-                          className="size-5 rounded-full object-cover"
-                        />
-                      ) : (
-                        <span className="flex size-5 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                          <Utensils className="size-3" aria-hidden="true" />
-                        </span>
-                      )}
-                      <span className="font-medium text-foreground">
-                        {dish.name}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {formatUsd(dish.priceCents)}
-                      </span>
-                      {!dish.isAvailable && (
-                        <span className="text-xs text-muted-foreground">
+
+                <div
+                  className={cn(
+                    "flex items-center gap-3",
+                    !day.dish.isAvailable && "opacity-60",
+                  )}
+                >
+                  {day.dish.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={day.dish.imageUrl}
+                      alt=""
+                      className="size-12 shrink-0 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                      <Utensils className="size-5" aria-hidden="true" />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground">
+                      {day.dish.name}
+                      {!day.dish.isAvailable && (
+                        <span className="ml-1.5 text-xs font-normal text-muted-foreground">
                           · épuisé
                         </span>
                       )}
-                    </span>
-                  ))}
+                    </p>
+                    {day.dish.category && (
+                      <p className="text-xs text-muted-foreground">
+                        {day.dish.category}
+                      </p>
+                    )}
+                  </div>
+                  <span className="shrink-0 font-semibold text-primary">
+                    {formatUsd(day.dish.priceCents)}
+                  </span>
                 </div>
+
+                {day.dish.accompaniments.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3">
+                    {day.dish.accompaniments.map((a) => (
+                      <span
+                        key={a.id}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs",
+                          !a.isAvailable && "opacity-60",
+                        )}
+                      >
+                        <span className="font-medium text-foreground">{a.name}</span>
+                        <span className="text-muted-foreground">
+                          {a.priceCents > 0 ? `+ ${formatUsd(a.priceCents)}` : "inclus"}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </li>
             ))}
           </ul>
         )}
+      </div>
       </div>
     </div>
   );

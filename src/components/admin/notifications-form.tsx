@@ -1,7 +1,14 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { CheckCircle2, Loader2, Mail, MessageCircle, Save } from "lucide-react";
+import {
+  CheckCircle2,
+  Loader2,
+  Mail,
+  MessageCircle,
+  Save,
+  Send,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,21 +92,98 @@ export function NotificationsForm({
           onChange={(v) => set("whatsappEnabled", v)}
           disabled={pending}
           icon={<MessageCircle className="size-4" aria-hidden="true" />}
-          title="WhatsApp Business"
-          description="Notifier via WhatsApp Business."
+          title="WhatsApp (client)"
+          description="Accusé de réception et suivi de statut envoyés au client. C'est son seul canal : il n'a pas de compte."
         />
         {form.whatsappEnabled && (
+          <div className="ml-1 space-y-4 pl-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="whatsappNumber">
+                Numéro WhatsApp de l&apos;équipe
+              </Label>
+              <Input
+                id="whatsappNumber"
+                name="whatsappNumber"
+                value={form.whatsappNumber ?? ""}
+                onChange={(e) => set("whatsappNumber", e.target.value)}
+                placeholder="+243 991 234 567"
+                disabled={pending}
+                className="h-10 max-w-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Reçoit une alerte à chaque nouvelle commande. Laissez vide pour
+                ne notifier que Telegram.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="whatsappTemplateOrderReceived">
+                  Template « commande reçue »
+                </Label>
+                <Input
+                  id="whatsappTemplateOrderReceived"
+                  name="whatsappTemplateOrderReceived"
+                  value={form.whatsappTemplateOrderReceived ?? ""}
+                  onChange={(e) =>
+                    set("whatsappTemplateOrderReceived", e.target.value)
+                  }
+                  placeholder="azaria_commande_recue"
+                  disabled={pending}
+                  className="h-10"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="whatsappTemplateStatusChange">
+                  Template « changement de statut »
+                </Label>
+                <Input
+                  id="whatsappTemplateStatusChange"
+                  name="whatsappTemplateStatusChange"
+                  value={form.whatsappTemplateStatusChange ?? ""}
+                  onChange={(e) =>
+                    set("whatsappTemplateStatusChange", e.target.value)
+                  }
+                  placeholder="azaria_suivi_commande"
+                  disabled={pending}
+                  className="h-10"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Meta n&apos;autorise le message libre que dans les 24 h suivant le
+              dernier message du client. Renseignez ici le nom de vos templates
+              approuvés pour que les envois passent en toutes circonstances.
+            </p>
+          </div>
+        )}
+
+        <Toggle
+          name="telegramEnabled"
+          checked={form.telegramEnabled}
+          onChange={(v) => set("telegramEnabled", v)}
+          disabled={pending}
+          icon={<Send className="size-4" aria-hidden="true" />}
+          title="Telegram (équipe)"
+          description="Alerte interne à chaque nouvelle commande, dans un chat ou un groupe."
+        />
+        {form.telegramEnabled && (
           <div className="ml-1 flex flex-col gap-2 pl-3">
-            <Label htmlFor="whatsappNumber">Numéro WhatsApp</Label>
+            <Label htmlFor="telegramChatId">Identifiant du chat</Label>
             <Input
-              id="whatsappNumber"
-              name="whatsappNumber"
-              value={form.whatsappNumber ?? ""}
-              onChange={(e) => set("whatsappNumber", e.target.value)}
-              placeholder="+243 …"
+              id="telegramChatId"
+              name="telegramChatId"
+              value={form.telegramChatId ?? ""}
+              onChange={(e) => set("telegramChatId", e.target.value)}
+              placeholder="-1001234567890"
               disabled={pending}
               className="h-10 max-w-sm"
             />
+            <p className="text-xs text-muted-foreground">
+              Démarrez une conversation avec le bot, puis récupérez le{" "}
+              <code className="rounded bg-muted px-1">chat.id</code> via
+              getUpdates. Un identifiant de groupe commence par un tiret.
+            </p>
           </div>
         )}
       </fieldset>
@@ -115,7 +199,7 @@ export function NotificationsForm({
           onChange={(v) => set("notifyNewOrder", v)}
           disabled={pending}
           title="Nouvelle commande"
-          description="À chaque commande reçue."
+          description="Alerte l'équipe (Telegram et WhatsApp) à chaque commande reçue."
         />
         <Toggle
           name="notifyStatusChange"
@@ -123,13 +207,15 @@ export function NotificationsForm({
           onChange={(v) => set("notifyStatusChange", v)}
           disabled={pending}
           title="Changement de statut"
-          description="Quand une commande change d'état (confirmée, prête…)."
+          description="Prévient le client quand sa commande avance (confirmée, prête…)."
         />
       </fieldset>
 
       <p className="text-xs text-muted-foreground">
-        Ces réglages sont enregistrés dès maintenant ; l&apos;envoi réel des
-        messages sera branché avec le module d&apos;expédition.
+        Les identifiants des fournisseurs (jeton Meta, bot Telegram) vivent dans
+        le fichier <code className="rounded bg-muted px-1">.env</code> de
+        l&apos;API. Tant qu&apos;ils sont absents, les envois sont journalisés
+        sans partir.
       </p>
 
       <div className="flex items-center justify-end border-t border-border pt-4">

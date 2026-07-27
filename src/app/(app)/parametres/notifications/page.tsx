@@ -8,11 +8,15 @@ export const metadata = { title: "Notifications" };
 
 const FALLBACK: NotificationsSettings = {
   emailEnabled: false,
-  whatsappEnabled: false,
+  whatsappEnabled: true,
   senderEmail: null,
   whatsappNumber: null,
+  telegramEnabled: false,
+  telegramChatId: null,
   notifyNewOrder: true,
   notifyStatusChange: true,
+  whatsappTemplateOrderReceived: null,
+  whatsappTemplateStatusChange: null,
 };
 
 export default function ParametresNotificationsPage() {

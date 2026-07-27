@@ -24,8 +24,12 @@ export async function saveNotificationsAction(
     whatsappEnabled: on("whatsappEnabled"),
     senderEmail: text("senderEmail"),
     whatsappNumber: text("whatsappNumber"),
+    telegramEnabled: on("telegramEnabled"),
+    telegramChatId: text("telegramChatId"),
     notifyNewOrder: on("notifyNewOrder"),
     notifyStatusChange: on("notifyStatusChange"),
+    whatsappTemplateOrderReceived: text("whatsappTemplateOrderReceived"),
+    whatsappTemplateStatusChange: text("whatsappTemplateStatusChange"),
   };
 
   const res = await updateNotifications(body, token);

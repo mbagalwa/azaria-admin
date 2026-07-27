@@ -11,7 +11,7 @@ import {
   ORDER_MODE_LABEL,
   type OrderStatus,
 } from "@/lib/order-status";
-import { customerAvatar } from "@/lib/cover";
+import { customerAvatar, customerSeed } from "@/lib/cover";
 import {
   StatusDonut,
   CaTrend,
@@ -423,7 +423,7 @@ function Meter({
 
 function OrderCard({ order, late }: { order: OrderSummary; late: boolean }) {
   const qty = order.items.reduce((s, i) => s + i.quantity, 0);
-  const name = order.customer.fullName ?? order.customer.email;
+  const name = order.customer.fullName;
   return (
     <Link
       href={`/commandes/${order.deliveryDate}`}
@@ -440,7 +440,7 @@ function OrderCard({ order, late }: { order: OrderSummary; late: boolean }) {
       <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={customerAvatar(order.customer.email)}
+          src={customerAvatar(customerSeed(order.customer))}
           alt=""
           className="size-4 rounded-full bg-muted"
         />

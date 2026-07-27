@@ -16,25 +16,34 @@ export type ProgramSummary = {
   createdAt: string;
 };
 
-export type ProgramDayDish = {
+/** Accompagnement proposé avec le plat du jour, à prix figé. */
+export type ProgramDayAccompaniment = {
   id: number;
   name: string;
   priceCents: number;
-  category: string | null;
   imageUrl: string | null;
   isAvailable: boolean;
 };
 
-export type ProgramDay = { date: string; dishes: ProgramDayDish[] };
+export type ProgramDayDish = {
+  id: number;
+  name: string;
+  description: string | null;
+  priceCents: number;
+  category: string | null;
+  imageUrl: string | null;
+  isAvailable: boolean;
+  accompaniments: ProgramDayAccompaniment[];
+};
 
-/** Détail d'un programme (plats par date). */
+/** UN SEUL plat par date : c'est le plat du jour. */
+export type ProgramDay = { date: string; dish: ProgramDayDish };
+
+/** Détail d'un programme (le plat du jour, par date). */
 export type ProgramDetail = ProgramSummary & {
   updatedAt: string | null;
   days: ProgramDay[];
 };
-
-/** Un plat programmé avec son prix figé (ce que le client paiera). */
-export type ProgramEntryDish = { dishId: number; priceCents: number };
 
 /** Payload envoyé à l'API pour créer/mettre à jour un programme. */
 export type ProgramPayload = {
@@ -42,7 +51,12 @@ export type ProgramPayload = {
   description: string | null;
   startDate: string;
   endDate: string;
-  entries: { date: string; dishes: ProgramEntryDish[] }[];
+  entries: {
+    date: string;
+    dishId: number;
+    priceCents: number;
+    accompaniments: { accompanimentId: number; priceCents: number }[];
+  }[];
 };
 
 export function listPrograms(

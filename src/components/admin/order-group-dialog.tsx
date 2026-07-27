@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { customerAvatar } from "@/lib/cover";
+import { customerAvatar, customerSeed } from "@/lib/cover";
 import { formatUsd } from "@/lib/format";
 import {
   ORDER_MODE_LABEL,
@@ -78,7 +78,7 @@ export function OrderGroupDialog({
         <AvatarGroup>
           {shown.map((o) => (
             <Avatar key={o.id} size="sm">
-              <AvatarImage src={customerAvatar(o.customer.email)} alt="" />
+              <AvatarImage src={customerAvatar(customerSeed(o.customer))} alt="" />
               <AvatarFallback>{o.customer.initials}</AvatarFallback>
             </Avatar>
           ))}
@@ -139,12 +139,12 @@ export function OrderGroupDialog({
               className="flex items-center gap-3 rounded-lg border border-border p-2.5"
             >
               <Avatar>
-                <AvatarImage src={customerAvatar(o.customer.email)} alt="" />
+                <AvatarImage src={customerAvatar(customerSeed(o.customer))} alt="" />
                 <AvatarFallback>{o.customer.initials}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-foreground">
-                  {o.customer.fullName ?? o.customer.email}
+                  {o.customer.fullName}
                 </p>
                 <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
                   <span>{o.code}</span>

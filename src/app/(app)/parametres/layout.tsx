@@ -22,14 +22,16 @@ export default function ParametresLayout({
         </p>
       </div>
 
+      {/* `lg:items-start` est ce qui rend la sidebar collante possible : sans lui,
+          l'étirement par défaut du flex lui donne la hauteur du contenu. */}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        {/* Mobile : menu hamburger */}
-        <div className="lg:hidden">
+        {/* Mobile : menu hamburger, collé sous le navbar */}
+        <div className="sticky top-(--app-navbar-height) z-30 lg:hidden">
           <ParametresMobileMenu />
         </div>
 
-        {/* Desktop : sidebar complète */}
-        <aside className="hidden lg:block lg:w-72 lg:shrink-0">
+        {/* Desktop : sidebar complète, collante le temps qu'on parcourt la page */}
+        <aside className="hidden lg:sticky lg:block lg:w-72 lg:shrink-0 lg:top-[calc(var(--app-navbar-height)+1rem)]">
           <ParametresSidebar />
         </aside>
 

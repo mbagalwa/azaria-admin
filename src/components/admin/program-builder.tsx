@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { DateRangePicker } from "@/components/admin/date-range-picker";
 import {
   DishDayDialog,
-  type DaySelection,
+  type AccompanimentOption,
+  type DayAssignment,
   type DishOption,
 } from "@/components/admin/dish-day-dialog";
 import {
@@ -42,17 +43,30 @@ type EditProgram = {
   description: string | null;
   startDate: string;
   endDate: string;
-  days: { date: string; dishes: { id: number; priceCents: number }[] }[];
+  /** Une entrée par date : LE plat du jour et ses accompagnements. */
+  days: {
+    date: string;
+    dishId: number;
+    priceCents: number;
+    accompaniments: { accompanimentId: number; priceCents: number }[];
+  }[];
 };
 
 type Props = {
   mode: "create" | "edit";
   dishes: DishOption[];
+  accompaniments: AccompanimentOption[];
   existingPrograms: OverlapProgram[];
   program?: EditProgram;
 };
 
-export function ProgramBuilder({ mode, dishes, existingPrograms, program }: Props) {
+export function ProgramBuilder({
+  mode,
+  dishes,
+  accompaniments,
+  existingPrograms,
+  program,
+}: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -61,12 +75,17 @@ export function ProgramBuilder({ mode, dishes, existingPrograms, program }: Prop
   const [description, setDescription] = useState(program?.description ?? "");
   const [startDate, setStartDate] = useState(program?.startDate ?? "");
   const [endDate, setEndDate] = useState(program?.endDate ?? "");
-  const [assignments, setAssignments] = useState<Record<string, DaySelection[]>>(
+  /** Une seule assignation par date : le plat du jour. */
+  const [assignments, setAssignments] = useState<Record<string, DayAssignment>>(
     () =>
       Object.fromEntries(
         (program?.days ?? []).map((d) => [
           d.date,
-          d.dishes.map((x) => ({ dishId: x.id, priceCents: x.priceCents })),
+          {
+            dishId: d.dishId,
+            priceCents: d.priceCents,
+            accompaniments: d.accompaniments,
+          },
         ]),
       ),
   );
@@ -99,11 +118,9 @@ export function ProgramBuilder({ mode, dishes, existingPrograms, program }: Prop
       .filter((x) => x.programs.length > 0);
   }, [validInterval, startDate, endDate, existingPrograms]);
 
-  const scheduledDays = Object.values(assignments).filter(
-    (ids) => ids.length > 0,
-  ).length;
-  const totalDishes = Object.values(assignments).reduce(
-    (sum, ids) => sum + ids.length,
+  const scheduledDays = Object.keys(assignments).length;
+  const totalAccompaniments = Object.values(assignments).reduce(
+    (sum, a) => sum + a.accompaniments.length,
     0,
   );
 
@@ -113,9 +130,10 @@ export function ProgramBuilder({ mode, dishes, existingPrograms, program }: Prop
       setError("Choisissez un intervalle de dates valide (fin ≥ début).");
       return;
     }
+    /** Les dates hors intervalle (après resserrement des bornes) sont ignorées. */
     const entries = Object.entries(assignments)
-      .filter(([, dishes]) => dishes.length > 0)
-      .map(([date, dishes]) => ({ date, dishes }));
+      .filter(([date]) => date >= startDate && date <= endDate)
+      .map(([date, a]) => ({ date, ...a }));
 
     const payload = {
       title: title.trim() || null,
@@ -219,12 +237,12 @@ export function ProgramBuilder({ mode, dishes, existingPrograms, program }: Prop
         <div className="space-y-3 rounded-xl border border-border bg-card p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium text-foreground">
-              Cliquez sur un jour pour lui assigner des plats
+              Cliquez sur un jour pour choisir son plat
             </p>
             <p className="text-xs text-muted-foreground">
               {scheduledDays} jour{scheduledDays > 1 ? "s" : ""} programmé
-              {scheduledDays > 1 ? "s" : ""} · {totalDishes} plat
-              {totalDishes > 1 ? "s" : ""}
+              {scheduledDays > 1 ? "s" : ""} · {totalAccompaniments}{" "}
+              accompagnement{totalAccompaniments > 1 ? "s" : ""}
             </p>
           </div>
 
@@ -260,36 +278,27 @@ export function ProgramBuilder({ mode, dishes, existingPrograms, program }: Prop
                     disabled={pending}
                     className={cn(
                       "flex min-h-20 cursor-pointer flex-col rounded-lg border p-1.5 text-left transition-colors hover:border-ring/40 hover:bg-muted/50",
-                      assigned.length > 0
-                        ? "border-primary/40 bg-primary/5"
-                        : "border-border",
+                      assigned ? "border-primary/40 bg-primary/5" : "border-border",
                     )}
                   >
                     <span className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-foreground">
                         {dayNumber(day)}
                       </span>
-                      {assigned.length > 0 && (
-                        <span className="rounded-full bg-primary px-1.5 text-[0.6rem] font-bold leading-4 text-primary-foreground">
-                          {assigned.length}
-                        </span>
-                      )}
-                    </span>
-                    <span className="mt-1 space-y-0.5">
-                      {assigned.slice(0, 2).map((a) => (
+                      {assigned && assigned.accompaniments.length > 0 && (
                         <span
-                          key={a.dishId}
-                          className="block truncate rounded bg-background px-1 text-[0.65rem] text-muted-foreground ring-1 ring-border"
+                          className="rounded-full bg-primary px-1.5 text-[0.6rem] font-bold leading-4 text-primary-foreground"
+                          title={`${assigned.accompaniments.length} accompagnement(s)`}
                         >
-                          {dishById.get(a.dishId)?.name ?? "—"}
-                        </span>
-                      ))}
-                      {assigned.length > 2 && (
-                        <span className="block text-[0.6rem] text-muted-foreground">
-                          +{assigned.length - 2}
+                          +{assigned.accompaniments.length}
                         </span>
                       )}
                     </span>
+                    {assigned && (
+                      <span className="mt-1 block truncate rounded bg-background px-1 text-[0.65rem] text-muted-foreground ring-1 ring-border">
+                        {dishById.get(assigned.dishId)?.name ?? "—"}
+                      </span>
+                    )}
                   </button>
                 );
               }),
@@ -336,13 +345,14 @@ export function ProgramBuilder({ mode, dishes, existingPrograms, program }: Prop
         }}
         dateLabel={editingDate ? formatFR(editingDate) : ""}
         dishes={dishes}
-        selected={editingDate ? assignments[editingDate] ?? [] : []}
-        onConfirm={(selection) => {
+        accompaniments={accompaniments}
+        selected={editingDate ? (assignments[editingDate] ?? null) : null}
+        onConfirm={(assignment) => {
           if (!editingDate) return;
           const date = editingDate;
           setAssignments((a) => {
             const next = { ...a };
-            if (selection.length) next[date] = selection;
+            if (assignment) next[date] = assignment;
             else delete next[date];
             return next;
           });

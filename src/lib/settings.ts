@@ -20,11 +20,22 @@ export type RestaurantSettings = {
 
 export type NotificationsSettings = {
   emailEnabled: boolean;
+  /** Canal client : accusé de réception + suivi de statut. */
   whatsappEnabled: boolean;
   senderEmail: string | null;
+  /** Numéro WhatsApp de l'ÉQUIPE, destinataire des alertes internes. */
   whatsappNumber: string | null;
+  /** Canal interne : alerte de l'équipe à chaque nouvelle commande. */
+  telegramEnabled: boolean;
+  telegramChatId: string | null;
   notifyNewOrder: boolean;
   notifyStatusChange: boolean;
+  /**
+   * Templates Meta approuvés. Obligatoires en production : hors de la fenêtre
+   * de service de 24 h, WhatsApp refuse les messages texte libres.
+   */
+  whatsappTemplateOrderReceived: string | null;
+  whatsappTemplateStatusChange: string | null;
 };
 
 export type AppSettings = {

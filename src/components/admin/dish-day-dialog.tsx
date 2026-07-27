@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Search, Utensils } from "lucide-react";
+import { Check, Salad, Search, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,19 +22,38 @@ export type DishOption = {
   priceCents: number;
 };
 
-/** Un plat sélectionné pour la date, avec son prix figé (payé par le client). */
-export type DaySelection = { dishId: number; priceCents: number };
+export type AccompanimentOption = {
+  id: number;
+  name: string;
+  imageUrl: string | null;
+  isAvailable: boolean;
+  priceCents: number;
+};
+
+/** Un accompagnement retenu pour la date, avec son supplément figé. */
+export type DayAccompaniment = { accompanimentId: number; priceCents: number };
 
 /**
- * Sélection des plats d'une date donnée (multi-choix, sans doublon), chacun
- * avec son PRIX FIGÉ : prérempli au prix catalogue (ou au prix déjà programmé
- * en édition), ajustable par l'admin. Contrôlé par le builder.
+ * LE plat du jour, avec son PRIX FIGÉ (celui que le client paiera) et les
+ * accompagnements proposés avec lui, eux aussi à prix figé.
+ */
+export type DayAssignment = {
+  dishId: number;
+  priceCents: number;
+  accompaniments: DayAccompaniment[];
+};
+
+/**
+ * Choix du plat d'une date : un SEUL plat (règle métier), plus autant
+ * d'accompagnements que voulu. Les prix sont préremplis au catalogue (ou au
+ * prix déjà programmé en édition) et restent ajustables. Contrôlé par le builder.
  */
 export function DishDayDialog({
   open,
   onOpenChange,
   dateLabel,
   dishes,
+  accompaniments,
   selected,
   onConfirm,
 }: {
@@ -42,11 +61,14 @@ export function DishDayDialog({
   onOpenChange: (open: boolean) => void;
   dateLabel: string;
   dishes: DishOption[];
-  selected: DaySelection[];
-  onConfirm: (selection: DaySelection[]) => void;
+  accompaniments: AccompanimentOption[];
+  selected: DayAssignment | null;
+  onConfirm: (assignment: DayAssignment | null) => void;
 }) {
-  const [checked, setChecked] = useState<number[]>([]);
-  const [prices, setPrices] = useState<Record<number, string>>({});
+  const [dishId, setDishId] = useState<number | null>(null);
+  const [dishPrice, setDishPrice] = useState("");
+  const [extras, setExtras] = useState<number[]>([]);
+  const [extraPrices, setExtraPrices] = useState<Record<number, string>>({});
   const [query, setQuery] = useState("");
 
   // Réinitialise à chaque ouverture (ajustement d'état pendant le rendu).
@@ -54,10 +76,15 @@ export function DishDayDialog({
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setChecked(selected.map((s) => s.dishId));
-      setPrices(
+      setDishId(selected?.dishId ?? null);
+      setDishPrice(selected ? (selected.priceCents / 100).toFixed(2) : "");
+      setExtras((selected?.accompaniments ?? []).map((a) => a.accompanimentId));
+      setExtraPrices(
         Object.fromEntries(
-          selected.map((s) => [s.dishId, (s.priceCents / 100).toFixed(2)]),
+          (selected?.accompaniments ?? []).map((a) => [
+            a.accompanimentId,
+            (a.priceCents / 100).toFixed(2),
+          ]),
         ),
       );
       setQuery("");
@@ -73,29 +100,49 @@ export function DishDayDialog({
       )
     : dishes;
 
-  function toggle(dish: DishOption) {
-    setChecked((c) =>
-      c.includes(dish.id) ? c.filter((x) => x !== dish.id) : [...c, dish.id],
+  /** Un clic sur le plat déjà choisi le retire (jour sans plat). */
+  function pickDish(dish: DishOption) {
+    if (dishId === dish.id) {
+      setDishId(null);
+      return;
+    }
+    setDishId(dish.id);
+    setDishPrice((dish.priceCents / 100).toFixed(2));
+  }
+
+  function toggleExtra(a: AccompanimentOption) {
+    setExtras((c) =>
+      c.includes(a.id) ? c.filter((x) => x !== a.id) : [...c, a.id],
     );
-    // Premier cochage : préremplit avec le prix catalogue.
-    setPrices((p) =>
-      p[dish.id] !== undefined
-        ? p
-        : { ...p, [dish.id]: (dish.priceCents / 100).toFixed(2) },
+    setExtraPrices((p) =>
+      p[a.id] !== undefined ? p : { ...p, [a.id]: (a.priceCents / 100).toFixed(2) },
     );
   }
 
+  /** Convertit une saisie en centimes, avec repli sur le prix catalogue. */
+  function toCents(raw: string | undefined, fallback: number): number {
+    const parsed = Number.parseFloat((raw ?? "").replace(",", "."));
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) : fallback;
+  }
+
   function confirm() {
-    const selection = checked.map((id) => {
-      const catalog = dishes.find((d) => d.id === id);
-      const parsed = Number.parseFloat((prices[id] ?? "").replace(",", "."));
-      const priceCents =
-        Number.isFinite(parsed) && parsed >= 0
-          ? Math.round(parsed * 100)
-          : (catalog?.priceCents ?? 0);
-      return { dishId: id, priceCents };
+    if (dishId === null) {
+      onConfirm(null);
+      onOpenChange(false);
+      return;
+    }
+    const dish = dishes.find((d) => d.id === dishId);
+    onConfirm({
+      dishId,
+      priceCents: toCents(dishPrice, dish?.priceCents ?? 0),
+      accompaniments: extras.map((id) => {
+        const catalog = accompaniments.find((a) => a.id === id);
+        return {
+          accompanimentId: id,
+          priceCents: toCents(extraPrices[id], catalog?.priceCents ?? 0),
+        };
+      }),
     });
-    onConfirm(selection);
     onOpenChange(false);
   }
 
@@ -103,10 +150,10 @@ export function DishDayDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Plats du {dateLabel}</DialogTitle>
+          <DialogTitle>Plat du {dateLabel}</DialogTitle>
           <DialogDescription>
-            Le prix indiqué est celui que le client paiera — ajustez-le si
-            besoin.
+            Un seul plat par jour. Le prix indiqué est celui que le client
+            paiera.
           </DialogDescription>
         </DialogHeader>
 
@@ -124,14 +171,14 @@ export function DishDayDialog({
           />
         </div>
 
-        <ul className="max-h-72 space-y-1 overflow-y-auto">
+        <ul className="max-h-56 space-y-1 overflow-y-auto">
           {dishes.length === 0 && (
             <li className="py-6 text-center text-sm text-muted-foreground">
               Aucun plat au catalogue. Ajoutez-en dans Paramètres → Plats.
             </li>
           )}
           {filtered.map((d) => {
-            const on = checked.includes(d.id);
+            const on = dishId === d.id;
             return (
               <li
                 key={d.id}
@@ -144,13 +191,13 @@ export function DishDayDialog({
               >
                 <button
                   type="button"
-                  onClick={() => toggle(d)}
+                  onClick={() => pickDish(d)}
                   aria-pressed={on}
                   className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
                 >
                   <span
                     className={cn(
-                      "flex size-5 shrink-0 items-center justify-center rounded border",
+                      "flex size-5 shrink-0 items-center justify-center rounded-full border",
                       on
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-input",
@@ -191,10 +238,8 @@ export function DishDayDialog({
                       inputMode="decimal"
                       step="0.01"
                       min="0"
-                      value={prices[d.id] ?? ""}
-                      onChange={(e) =>
-                        setPrices((p) => ({ ...p, [d.id]: e.target.value }))
-                      }
+                      value={dishPrice}
+                      onChange={(e) => setDishPrice(e.target.value)}
                       aria-label={`Prix de ${d.name}`}
                       title={`Prix catalogue : ${formatUsd(d.priceCents)}`}
                       className="h-8 w-24 rounded-md border border-input bg-background pl-5 pr-1.5 text-right text-sm outline-none transition-colors focus-visible:border-ring/40 focus-visible:ring-2 focus-visible:ring-ring/15"
@@ -210,6 +255,101 @@ export function DishDayDialog({
           })}
         </ul>
 
+        {/* Accompagnements : visibles seulement une fois le plat choisi. */}
+        {dishId !== null && (
+          <div className="space-y-2 border-t border-border pt-3">
+            <p className="text-sm font-medium text-foreground">
+              Accompagnements proposés
+              <span className="ml-1.5 font-normal text-muted-foreground">
+                ({extras.length} sélectionné{extras.length > 1 ? "s" : ""})
+              </span>
+            </p>
+            {accompaniments.length === 0 ? (
+              <p className="py-3 text-center text-sm text-muted-foreground">
+                Aucun accompagnement. Créez-en dans Paramètres →
+                Accompagnements.
+              </p>
+            ) : (
+              <ul className="max-h-40 space-y-1 overflow-y-auto">
+                {accompaniments.map((a) => {
+                  const on = extras.includes(a.id);
+                  return (
+                    <li
+                      key={a.id}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg border px-2 py-1 transition-colors",
+                        on
+                          ? "border-primary/40 bg-primary/5"
+                          : "border-transparent hover:bg-muted",
+                      )}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleExtra(a)}
+                        aria-pressed={on}
+                        className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left"
+                      >
+                        <span
+                          className={cn(
+                            "flex size-4.5 shrink-0 items-center justify-center rounded border",
+                            on
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-input",
+                          )}
+                        >
+                          {on && <Check className="size-3" aria-hidden="true" />}
+                        </span>
+                        {a.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={a.imageUrl}
+                            alt=""
+                            className="size-7 shrink-0 rounded object-cover"
+                          />
+                        ) : (
+                          <span className="flex size-7 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
+                            <Salad className="size-3.5" aria-hidden="true" />
+                          </span>
+                        )}
+                        <span className="min-w-0 truncate text-sm text-foreground">
+                          {a.name}
+                          {!a.isAvailable && (
+                            <span className="text-muted-foreground"> · indisponible</span>
+                          )}
+                        </span>
+                      </button>
+
+                      {on ? (
+                        <div className="relative shrink-0">
+                          <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                            $
+                          </span>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                            value={extraPrices[a.id] ?? ""}
+                            onChange={(e) =>
+                              setExtraPrices((p) => ({ ...p, [a.id]: e.target.value }))
+                            }
+                            aria-label={`Supplément de ${a.name}`}
+                            className="h-7 w-20 rounded-md border border-input bg-background pl-5 pr-1.5 text-right text-sm outline-none transition-colors focus-visible:border-ring/40 focus-visible:ring-2 focus-visible:ring-ring/15"
+                          />
+                        </div>
+                      ) : (
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {a.priceCents > 0 ? `+ ${formatUsd(a.priceCents)}` : "Inclus"}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+
         <div className="flex justify-end gap-2 border-t border-border pt-3">
           <Button
             type="button"
@@ -220,7 +360,7 @@ export function DishDayDialog({
             Annuler
           </Button>
           <Button type="button" size="lg" onClick={confirm}>
-            Valider ({checked.length})
+            {dishId === null ? "Laisser vide" : "Valider"}
           </Button>
         </div>
       </DialogContent>
