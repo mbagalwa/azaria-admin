@@ -23,9 +23,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // Les extensions de navigateur (LanguageTool, Grammarly…) ajoutent leurs
+    // attributs sur <html> avant l'hydratation : on ignore l'écart sur ce
+    // seul élément, sans masquer les vrais décalages plus bas dans l'arbre.
     <html
       lang="fr"
       className={`${montserrat.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

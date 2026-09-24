@@ -258,7 +258,8 @@ export function ProgramBuilder({
             {weeks.map((week) =>
               week.map((day) => {
                 const inRange = day >= startDate && day <= endDate;
-                const assigned = assignments[day] ?? [];
+                /** `undefined` tant que le jour n'a pas reçu son plat. */
+                const assigned: DayAssignment | undefined = assignments[day];
                 if (!inRange) {
                   return (
                     <div
@@ -295,7 +296,7 @@ export function ProgramBuilder({
                       )}
                     </span>
                     {assigned && (
-                      <span className="mt-1 block truncate rounded bg-background px-1 text-[0.65rem] text-muted-foreground ring-1 ring-border">
+                      <span className="mt-1 block truncate rounded bg-background px-1 text-[0.65rem] font-semibold text-foreground ring-1 ring-border">
                         {dishById.get(assigned.dishId)?.name ?? "—"}
                       </span>
                     )}

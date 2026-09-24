@@ -173,7 +173,7 @@ export default async function ProgrammeDetailPage({
                     </span>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-foreground">
+                    <p className="font-semibold text-foreground">
                       {day.dish.name}
                       {!day.dish.isAvailable && (
                         <span className="ml-1.5 text-xs font-normal text-muted-foreground">

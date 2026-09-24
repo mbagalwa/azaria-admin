@@ -9,12 +9,14 @@ import {
   ClipboardList,
   LayoutDashboard,
   LogOut,
+  Menu,
   Moon,
   Settings,
   Sparkles,
   Sun,
   UserRound,
   UtensilsCrossed,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
@@ -73,10 +75,11 @@ export function Navbar({
   const pathname = usePathname();
   const toast = useToast();
   const [dark, setDark] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
-    // setDark(document.documentElement.classList.contains("dark"));
-  }, []);
+    setNavOpen(false);
+  }, [pathname]);
 
   function toggleTheme() {
     const next = !document.documentElement.classList.contains("dark");
@@ -89,15 +92,31 @@ export function Navbar({
   // le contenu défile DERRIÈRE la barre, et non dans ses gouttières latérales.
   return (
     <header className="sticky top-0 z-40 bg-(--app-background)/85 px-5 pt-4 pb-2 backdrop-blur-sm">
-      <div  className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2 sm:px-6 bg-card rounded-xl">
-              {/* Logo */}
-      <Link
-        href="/"
-        aria-label="Azaria - accueil"
-        className="inline-flex items-center py-1.5 pl-1.5 pr-4"
-      >
-        <Logo size={30} />
-      </Link>
+      <div className="relative mx-auto max-w-7xl">
+      <div className="flex items-center justify-between gap-3 rounded-xl bg-card px-3 py-2 sm:gap-4 sm:px-6">
+      <div className="flex min-w-0 items-center gap-2">
+        <button
+          type="button"
+          aria-label={navOpen ? "Fermer le menu" : "Ouvrir le menu"}
+          aria-expanded={navOpen}
+          aria-controls="mobile-nav"
+          onClick={() => setNavOpen((open) => !open)}
+          className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-muted lg:hidden"
+        >
+          {navOpen ? (
+            <X className="size-4.5" aria-hidden="true" />
+          ) : (
+            <Menu className="size-4.5" aria-hidden="true" />
+          )}
+        </button>
+        <Link
+          href="/"
+          aria-label="Azaria - accueil"
+          className="inline-flex min-w-0 items-center py-1.5"
+        >
+          <Logo size={30} />
+        </Link>
+      </div>
 
       {/* Onglets au centre (navigation principale) */}
       <nav className="hidden rounded-full p-1 lg:block">
@@ -126,7 +145,7 @@ export function Navbar({
       </nav>
 
       {/* Cluster de droite */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex shrink-0 items-center gap-2">
         {/* Clients ayant une commande en cours + total en cours */}
         {clients.length > 0 && (
           <div
@@ -213,6 +232,38 @@ export function Navbar({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      </div>
+
+      {navOpen && (
+        <nav
+          id="mobile-nav"
+          className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-50 rounded-xl border border-border bg-card p-2 shadow-lg lg:hidden"
+        >
+          <ul className="flex flex-col">
+            {NAV.map((item) => {
+              const active = isActive(pathname, item.href);
+              const Icon = navIcons[item.icon];
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    onClick={() => setNavOpen(false)}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                      active
+                        ? "bg-muted font-semibold text-primary"
+                        : "font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="size-4" aria-hidden="true" />
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
       </div>
     </header>
   );

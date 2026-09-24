@@ -316,9 +316,8 @@ export function OrderSheet({
             return (
               <li key={item.id} className="px-3 py-2 text-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate text-foreground">
-                    <span className="font-semibold">×{item.quantity}</span>{" "}
-                    {item.name}
+                  <span className="min-w-0 truncate font-semibold text-foreground">
+                    ×{item.quantity} {item.name}
                   </span>
                   <span className="shrink-0 font-medium text-muted-foreground">
                     {formatUsd((item.priceCents + extrasCents) * item.quantity)}

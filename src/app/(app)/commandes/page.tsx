@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CommandesPhoneWeek } from "@/components/admin/commandes-phone-week";
 import { OrderGroupDialog } from "@/components/admin/order-group-dialog";
 import { getToken } from "@/lib/auth";
 import { listOrders, type OrderSummary } from "@/lib/orders";
@@ -119,26 +120,45 @@ export default async function CommandesPage({
             ))}
           </nav>
 
-          <nav className="inline-flex rounded-lg border border-border bg-card p-0.5">
-            {(
-              [
-                { key: "month", label: "Mois" },
-                { key: "week", label: "Semaine" },
-              ] as { key: View; label: string }[]
-            ).map((v) => (
-              <Link
-                key={v.key}
-                href={href({ view: v.key, d: anchor, mode })}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                  view === v.key
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {v.label}
-              </Link>
-            ))}
+          <nav
+            className="inline-flex rounded-lg border border-border bg-card p-0.5"
+            aria-label="Type d'affichage"
+          >
+            <CommandesPhoneWeek
+              active={isMonth}
+              href={href({ view: "week", d: anchor, mode })}
+            />
+            {/* Téléphone : Mois est inactif. Tablette et au-dessus : il redevient un lien. */}
+            <span
+              aria-disabled="true"
+              className="cursor-not-allowed rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground/40 md:hidden"
+            >
+              Mois
+            </span>
+            <Link
+              href={href({ view: "month", d: anchor, mode })}
+              aria-current={isMonth ? "page" : undefined}
+              className={cn(
+                "hidden rounded-md px-3 py-1.5 text-sm font-medium transition-colors md:inline",
+                isMonth
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Mois
+            </Link>
+            <Link
+              href={href({ view: "week", d: anchor, mode })}
+              aria-current={!isMonth ? "page" : undefined}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                !isMonth
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Semaine
+            </Link>
           </nav>
 
           <Link

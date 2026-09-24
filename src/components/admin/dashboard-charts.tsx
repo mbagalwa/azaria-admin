@@ -178,7 +178,7 @@ export function TopDishesBars({
           key={i}
           className="grid grid-cols-[minmax(0,8rem)_1fr_2.25rem] items-center gap-3"
         >
-          <span className="truncate text-sm text-muted-foreground" title={it.name}>
+          <span className="truncate text-sm font-semibold text-foreground" title={it.name}>
             {it.name}
           </span>
           <span className="relative h-3.5 overflow-hidden rounded bg-muted">

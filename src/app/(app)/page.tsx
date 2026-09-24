@@ -331,7 +331,7 @@ async function DashboardBoard() {
                 <span className="grid size-6 place-items-center rounded-md bg-destructive/10 text-xs font-bold text-destructive">
                   ✕
                 </span>
-                <span className="flex-1 font-medium text-foreground">{d.name}</span>
+                <span className="flex-1 font-semibold text-foreground">{d.name}</span>
                 <Link
                   href="/parametres/plats"
                   className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive hover:bg-destructive/15"
